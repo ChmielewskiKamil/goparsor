@@ -2,7 +2,10 @@
 // on Rob Pike's talk on [Lexical Scanning in Go](https://www.youtube.com/watch?v=HxaD_trXwRE)
 package lexer
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // The itemType identifies the type of lex items.
 type itemType int
@@ -44,6 +47,15 @@ const (
 	itemRightBrace                 // the character "}"
 )
 
+var tokens = [...]string{
+	itemContract:   "Contract",
+	itemElse:       "else",
+	itemIf:         "if",
+	itemLeftBrace:  "{",
+	itemRightBrace: "}",
+	itemEOF:        "EOF",
+}
+
 // The state represents where we are in the input and what we expect to see next.
 // An action defines what we are going to do in that state given the input.
 // After you execute the action, you will be in a new state.
@@ -82,6 +94,7 @@ func lex(name, input string) (*lexer, chan item) {
 		input: input,
 		items: make(chan item),
 	}
+	// This starts the state machine.
 	go l.run()
 
 	return l, l.items
@@ -93,4 +106,32 @@ func (l *lexer) emit(t itemType) {
 	l.items <- item{t, l.input[l.start:l.pos]}
 	// Move ahead in the input after sending it to the caller.
 	l.start = l.pos
+}
+
+func lexText(l *lexer) stateFn {
+	for {
+		if strings.HasPrefix(l.input[l.pos:], tokens[itemContract]) {
+			if l.pos > l.start {
+				l.emit(itemText)
+			}
+			return lexContract
+		}
+		if l.next() == tokens[itemEOF] {
+			break
+		}
+	}
+	if l.pos > l.start {
+		l.emit(itemText)
+	}
+
+	l.emit(itemEOF)
+
+	// Stop the lexer.
+	return nil
+}
+
+func lexContract(l *lexer) stateFn {
+	l.pos += len(tokens[itemContract])
+	l.emit(itemContract)
+	return lexInsideContract // Now inside the contract.
 }
