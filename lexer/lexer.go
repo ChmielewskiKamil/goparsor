@@ -27,6 +27,8 @@ func New(input string) *Lexer {
 func (l *Lexer) NextToken() token.Token {
 	var tok token.Token
 
+	l.skipWhitespace()
+
 	switch l.ch {
 	case '=':
 		tok = newToken(token.ASSIGN, l.ch)
@@ -77,6 +79,14 @@ func (l *Lexer) readChar() {
 
 	l.position = l.readPosition
 	l.readPosition += 1
+}
+
+func (l *Lexer) skipWhitespace() {
+	// We don't care about whitespaces, newlines, carriage returns and tabs.
+	for l.ch == ' ' || l.ch == '\n' || l.ch == '\r' || l.ch == '\t' {
+		// When encountered with any of these, just move forward.
+		l.readChar()
+	}
 }
 
 func (l *Lexer) readIdentifier() string {
