@@ -58,6 +58,10 @@ func (l *Lexer) NextToken() token.Token {
 			// Exit early because readIdentifier(...) advances l.position.
 			// We don't want to do this again after switch statement.
 			return tok
+		} else if isDigit(l.ch) {
+			tok.Type = token.INT
+			tok.Literal = l.readNumber()
+			return tok
 		} else {
 			tok = newToken(token.ILLEGAL, l.ch)
 		}
@@ -98,6 +102,16 @@ func (l *Lexer) readIdentifier() string {
 	return l.input[position:l.position]
 }
 
+func (l *Lexer) readNumber() string {
+	position := l.position
+
+	for isDigit(l.ch) {
+		l.readChar()
+	}
+
+	return l.input[position:l.position]
+}
+
 /*~*~*~*~*~*~*~*~*~*~*~*~* Helper Functions ~*~*~*~*~*~*~*~*~*~*~*~*~*/
 
 func newToken(tkType token.TokenType, ch byte) token.Token {
@@ -109,4 +123,9 @@ func newToken(tkType token.TokenType, ch byte) token.Token {
 
 func isLetter(ch byte) bool {
 	return ch >= 'a' && ch <= 'z' || ch >= 'A' && ch <= 'Z' || ch == '_'
+}
+
+func isDigit(ch byte) bool {
+	// We only support integers
+	return ch >= '0' && ch <= '9'
 }
