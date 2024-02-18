@@ -23,6 +23,9 @@ func TestNextToken(t *testing.T) {
     } else {
         return false
     }
+
+    11 == 11;
+    15 != 11;
     `
 
 	tests := []struct {
@@ -92,6 +95,14 @@ func TestNextToken(t *testing.T) {
 		{token.RETURN, "return"},
 		{token.FALSE, "false"},
 		{token.RBRACE, "}"},
+		{token.INT, "11"},
+		{token.EQ, "=="},
+		{token.INT, "11"},
+		{token.SEMICOLON, ";"},
+		{token.INT, "15"},
+		{token.NOT_EQ, "!="},
+		{token.INT, "11"},
+		{token.SEMICOLON, ";"},
 		{token.EOF, ""},
 	}
 
