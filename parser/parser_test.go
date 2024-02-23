@@ -8,7 +8,7 @@ import (
 
 func TestLetStatements(t *testing.T) {
 	input := `
-    let x = 5;
+    let x 5;
     let foo = 123;
     
     let bar = 0;
@@ -18,6 +18,7 @@ func TestLetStatements(t *testing.T) {
 	p := New(l)
 
 	program := p.ParseProgram()
+	checkParserErrors(t, p)
 
 	if program == nil {
 		t.Fatalf("ParseProgram(...) returned nil")
@@ -41,6 +42,22 @@ func TestLetStatements(t *testing.T) {
 			return
 		}
 	}
+}
+
+func checkParserErrors(t *testing.T, parser *Parser) {
+	errors := parser.errors
+
+	if len(errors) == 0 {
+		return
+	}
+
+	t.Errorf("Parser encountered: %d errors.", len(errors))
+
+	for _, msg := range errors {
+		t.Errorf("parser error: %q", msg)
+	}
+
+	t.FailNow()
 }
 
 func testLetStatement(t *testing.T, stmt ast.Statement, identName string) bool {
