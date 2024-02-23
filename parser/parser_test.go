@@ -44,22 +44,6 @@ func TestLetStatements(t *testing.T) {
 	}
 }
 
-func checkParserErrors(t *testing.T, parser *Parser) {
-	errors := parser.errors
-
-	if len(errors) == 0 {
-		return
-	}
-
-	t.Errorf("Parser encountered: %d errors.", len(errors))
-
-	for _, msg := range errors {
-		t.Errorf("parser error: %q", msg)
-	}
-
-	t.FailNow()
-}
-
 func testLetStatement(t *testing.T, stmt ast.Statement, identName string) bool {
 	if stmt.TokenLiteral() != "let" {
 		t.Errorf("stmt.tokenLiteral not 'let', got: %q", stmt.TokenLiteral())
@@ -82,4 +66,62 @@ func testLetStatement(t *testing.T, stmt ast.Statement, identName string) bool {
 	}
 
 	return true
+}
+
+func TestReturnStatements(t *testing.T) {
+	input := `
+    return 5;
+
+    return 0;
+    return 99999999;
+
+    `
+
+	l := lexer.New(input)
+	p := New(l)
+
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	if program == nil {
+		t.Fatalf("ParseProgram(...) returned nil")
+	}
+
+	stmts := program.Statements
+
+	if len(stmts) != 3 {
+		t.Errorf("Expected: 3 return statements, got: %d", len(stmts))
+	}
+
+	for _, stmt := range stmts {
+		returnStmt, ok := stmt.(*ast.ReturnStatement)
+		if !ok {
+			t.Errorf("Expected statement of type *ast.ReturnStatement, got: %T", stmt)
+			continue
+		}
+
+		if returnStmt.TokenLiteral() != "return" {
+			t.Errorf("Return statement expected to have: 'return' literal, got: %q", returnStmt.TokenLiteral())
+		}
+	}
+}
+
+////////////////////////////////////////////////////////////////////
+//                             UTILS 			                  //
+////////////////////////////////////////////////////////////////////
+
+func checkParserErrors(t *testing.T, parser *Parser) {
+	errors := parser.errors
+
+	if len(errors) == 0 {
+		return
+	}
+
+	t.Errorf("Parser encountered: %d errors.", len(errors))
+
+	for _, msg := range errors {
+		t.Errorf("parser error: %q", msg)
+	}
+
+	t.FailNow()
 }
