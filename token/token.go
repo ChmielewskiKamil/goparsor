@@ -19,16 +19,18 @@ const (
 	INT   = "INT"   // Integer type
 
 	// Operators
-	ASSIGN   = "="
+	BANG   = "!"
+	ASSIGN = "="
+	// Operators: Binary
 	PLUS     = "+"
 	MINUS    = "-"
 	ASTERISK = "*"
 	FSLASH   = "/"
-	LT       = "<"
-	GT       = ">"
-	BANG     = "!"
-	EQ       = "=="
-	NOT_EQ   = "!="
+	// Operators: Comparison
+	LT     = "<"
+	GT     = ">"
+	EQ     = "=="
+	NOT_EQ = "!="
 
 	// Delimiters
 	COMMA     = ","
