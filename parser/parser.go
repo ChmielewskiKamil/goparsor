@@ -38,6 +38,16 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(token.MINUS, p.parsePrefixExpression)
 	p.registerPrefix(token.BANG, p.parsePrefixExpression)
 
+	p.infixParseFns = make(map[token.TokenType]infixParseFn)
+	p.registerInfix(token.EQ, p.parseInfixExpression)
+	p.registerInfix(token.NOT_EQ, p.parseInfixExpression)
+	p.registerInfix(token.PLUS, p.parseInfixExpression)
+	p.registerInfix(token.MINUS, p.parseInfixExpression)
+	p.registerInfix(token.ASTERISK, p.parseInfixExpression)
+	p.registerInfix(token.FSLASH, p.parseInfixExpression)
+	p.registerInfix(token.GT, p.parseInfixExpression)
+	p.registerInfix(token.LT, p.parseInfixExpression)
+
 	return p
 }
 
@@ -60,6 +70,17 @@ const (
 	CALL            // myFunction(A)
 )
 
+var precedences = map[token.TokenType]int{
+	token.EQ:       EQUALS,
+	token.NOT_EQ:   EQUALS,
+	token.LT:       LESSGREATER,
+	token.GT:       LESSGREATER,
+	token.PLUS:     SUM,
+	token.MINUS:    SUM,
+	token.ASTERISK: PRODUCT,
+	token.FSLASH:   PRODUCT,
+}
+
 // Pratt Parsing functions
 type (
 	prefixParseFn func() ast.Expression
@@ -72,6 +93,22 @@ func (p *Parser) registerPrefix(tokenType token.TokenType, fn prefixParseFn) {
 
 func (p *Parser) registerInfix(tokenType token.TokenType, fn infixParseFn) {
 	p.infixParseFns[tokenType] = fn
+}
+
+func (p *Parser) peekPrecedence() int {
+	if precedence, ok := precedences[p.peekToken.Type]; ok {
+		return precedence
+	}
+
+	return LOWEST
+}
+
+func (p *Parser) currPrecedence() int {
+	if precedence, ok := precedences[p.currToken.Type]; ok {
+		return precedence
+	}
+
+	return LOWEST
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -167,9 +204,19 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 		p.noPrefixParseFnError(p.currToken.Type)
 		return nil
 	}
-
 	// If there is such function, call it
 	leftExpr := prefix()
+
+	for p.currToken.Type != token.SEMICOLON && precedence < p.peekPrecedence() {
+		infix := p.infixParseFns[p.peekToken.Type]
+		if infix == nil {
+			return leftExpr
+		}
+
+		p.NextToken()
+
+		leftExpr = infix(leftExpr)
+	}
 
 	return leftExpr
 }
@@ -204,6 +251,21 @@ func (p *Parser) parsePrefixExpression() ast.Expression {
 	prefixExpr.Right = p.parseExpression(PREFIX)
 
 	return prefixExpr
+}
+
+func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
+	expr := &ast.InfixExpression{
+		Token:    p.currToken,
+		Left:     left,
+		Operator: p.currToken.Literal,
+	}
+
+	precedence := p.currPrecedence()
+	p.NextToken()
+
+	expr.Right = p.parseExpression(precedence)
+
+	return expr
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -241,6 +303,6 @@ func (p *Parser) peekError(tkn token.TokenType) {
 }
 
 func (p *Parser) noPrefixParseFnError(tkn token.TokenType) {
-	msg := fmt.Sprintf("No prefix parse fn found for token type: %s", tkn)
+	msg := fmt.Sprintf("No prefix parse function found for token: %s", tkn)
 	p.errors = append(p.errors, msg)
 }

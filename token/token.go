@@ -18,10 +18,10 @@ const (
 	IDENT = "IDENT" // add, foobar, x, y, ...
 	INT   = "INT"   // Integer type
 
-	// Operators
-	BANG   = "!"
-	ASSIGN = "="
-	// Operators: Binary
+	// Operators: Unary (<operator> <expression>)
+	BANG = "!"
+	// Operators: Binary (<expression> <operator> <expression>)
+	ASSIGN   = "="
 	PLUS     = "+"
 	MINUS    = "-"
 	ASTERISK = "*"
