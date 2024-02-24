@@ -5,7 +5,12 @@ import (
 	"goparsor/ast"
 	"goparsor/lexer"
 	"goparsor/token"
+	"strconv"
 )
+
+////////////////////////////////////////////////////////////////////
+//                           CORE PARSER                          //
+////////////////////////////////////////////////////////////////////
 
 type Parser struct {
 	l      *lexer.Lexer
@@ -13,6 +18,9 @@ type Parser struct {
 
 	currToken token.Token
 	peekToken token.Token
+
+	prefixParseFns map[token.TokenType]prefixParseFn
+	infixParseFns  map[token.TokenType]infixParseFn
 }
 
 func New(l *lexer.Lexer) *Parser {
@@ -24,24 +32,49 @@ func New(l *lexer.Lexer) *Parser {
 	p.NextToken()
 	p.NextToken()
 
+	p.prefixParseFns = make(map[token.TokenType]prefixParseFn)
+	p.registerPrefix(token.IDENT, p.parseIdentifier)
+	p.registerPrefix(token.INT, p.parseIntegerLiteral)
+
 	return p
-}
-
-func (p *Parser) Errors() []string {
-	return p.errors
-}
-
-func (p *Parser) peekError(tkn token.TokenType) {
-	msg := fmt.Sprintf("expected next token to be: %s, instead got: %s",
-		tkn, p.peekToken.Type)
-
-	p.errors = append(p.errors, msg)
 }
 
 func (p *Parser) NextToken() {
 	p.currToken = p.peekToken
 	p.peekToken = p.l.NextToken()
 }
+
+/*~*~*~*~*~*~*~*~*~*~*~*~* Pratt Parsing ~*~*~*~*~*~*~*~*~*~*~*~*~*/
+
+// Operator precedence for Pratt Parsing
+const (
+	_           int = iota
+	LOWEST          // Default, that we use for comparisons
+	EQUALS          // ==
+	LESSGREATER     // > or <
+	SUM             // +
+	PRODUCT         // *
+	PREFIX          // -A or !A
+	CALL            // myFunction(A)
+)
+
+// Pratt Parsing functions
+type (
+	prefixParseFn func() ast.Expression
+	infixParseFn  func(ast.Expression) ast.Expression
+)
+
+func (p *Parser) registerPrefix(tokenType token.TokenType, fn prefixParseFn) {
+	p.prefixParseFns[tokenType] = fn
+}
+
+func (p *Parser) registerInfix(tokenType token.TokenType, fn infixParseFn) {
+	p.infixParseFns[tokenType] = fn
+}
+
+////////////////////////////////////////////////////////////////////
+//                             Parsing  		                  //
+////////////////////////////////////////////////////////////////////
 
 func (p *Parser) ParseProgram() *ast.Program {
 	program := &ast.Program{}
@@ -66,7 +99,7 @@ func (p *Parser) parseStatement() ast.Statement {
 	case token.RETURN:
 		return p.parseReturnStatement()
 	default:
-		return nil
+		return p.parseExpressionStatement()
 	}
 }
 
@@ -111,6 +144,56 @@ func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 	return stmt
 }
 
+func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
+	stmt := &ast.ExpressionStatement{Token: p.currToken}
+
+	stmt.Expression = p.parseExpression(LOWEST)
+
+	// Semicolon is optional, that's why we either advance
+	// or let it be, without throwing an error
+	if p.peekTokenIs(token.SEMICOLON) {
+		p.NextToken()
+	}
+
+	return stmt
+}
+
+func (p *Parser) parseExpression(precedence int) ast.Expression {
+	// Check if there is an associated prefix parse function
+	prefix := p.prefixParseFns[p.currToken.Type]
+	if prefix == nil {
+		return nil
+	}
+
+	// If there is such function, call it
+	leftExpr := prefix()
+
+	return leftExpr
+}
+
+func (p *Parser) parseIdentifier() ast.Expression {
+	return &ast.Identifier{Token: p.currToken, Value: p.currToken.Literal}
+}
+
+func (p *Parser) parseIntegerLiteral() ast.Expression {
+	literal := &ast.IntegerLiteral{Token: p.currToken}
+
+	value, err := strconv.ParseInt(p.currToken.Literal, 0, 64)
+	if err != nil {
+		msg := fmt.Sprintf("Could not parse: %q as integer", p.currToken.Literal)
+		p.errors = append(p.errors, msg)
+		return nil
+	}
+
+	literal.Value = value
+
+	return literal
+}
+
+////////////////////////////////////////////////////////////////////
+//                             UTILS 			                  //
+////////////////////////////////////////////////////////////////////
+
 func (p *Parser) currTokenIs(tkn token.TokenType) bool {
 	return p.currToken.Type == tkn
 }
@@ -129,4 +212,15 @@ func (p *Parser) expectPeek(tkn token.TokenType) bool {
 		p.peekError(tkn)
 		return false
 	}
+}
+
+func (p *Parser) Errors() []string {
+	return p.errors
+}
+
+func (p *Parser) peekError(tkn token.TokenType) {
+	msg := fmt.Sprintf("expected next token to be: %s, instead got: %s",
+		tkn, p.peekToken.Type)
+
+	p.errors = append(p.errors, msg)
 }
