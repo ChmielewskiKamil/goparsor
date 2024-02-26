@@ -112,7 +112,7 @@ func (p *Parser) currPrecedence() int {
 }
 
 ////////////////////////////////////////////////////////////////////
-//                             Parsing  		                  //
+//                             Parsing                            //
 ////////////////////////////////////////////////////////////////////
 
 func (p *Parser) ParseProgram() *ast.Program {
@@ -269,7 +269,7 @@ func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
 }
 
 ////////////////////////////////////////////////////////////////////
-//                             UTILS 			                  //
+//                             UTILS                              //
 ////////////////////////////////////////////////////////////////////
 
 func (p *Parser) currTokenIs(tkn token.TokenType) bool {
