@@ -126,19 +126,28 @@ func TestParsingIdentifierExpression(t *testing.T) {
 			program.Statements[0])
 	}
 
-	ident, ok := stmt.Expression.(*ast.Identifier)
+	testIdentifier(t, stmt.Expression, "foobar")
+}
+
+func testIdentifier(t *testing.T, expr ast.Expression, value string) bool {
+	ident, ok := expr.(*ast.Identifier)
 	if !ok {
-		t.Fatalf("Expected: *ast.Identifier, got: %T", stmt.Expression)
+		t.Fatalf("Expected: *ast.Identifier, got: %T", expr)
+		return false
 	}
 
-	if ident.TokenLiteral() != "foobar" {
-		t.Errorf("Expected token literal: 'foobar', got: %q",
-			ident.TokenLiteral())
+	if ident.TokenLiteral() != value {
+		t.Errorf("Expected token literal: '%s', got: %q",
+			value, ident.TokenLiteral())
+		return false
 	}
 
-	if ident.Value != "foobar" {
-		t.Errorf("Expected ident value: 'foobar', got: %q", ident.Value)
+	if ident.Value != value {
+		t.Errorf("Expected ident value: '%s', got: %q", value, ident.Value)
+		return false
 	}
+
+	return true
 }
 
 func TestParsingIntegerLiterals(t *testing.T) {
